@@ -20,6 +20,7 @@ uint16_t spriteMapAddress;
 uint16_t shadowMapAddress;
 uint16_t tileAddress;
 uint16_t tileAddress2;
+uint16_t tileAddress3;
 uint8_t isAHeld;
 int8_t YVelocity;
 uint16_t dynamicMapAddress;
@@ -32,7 +33,7 @@ uint16_t scrollYCompare2;
 uint8_t halfTileY;
 
 
-void huge()
+void DMA()
 {
 //DMA routine
 __asm
@@ -43,10 +44,10 @@ ld (hl), #0x00
 inc hl
 ld (hl), #0x90
 inc hl
-ld (hl), #0x20
+ld (hl), #0xC0
 inc hl
 ld (hl), #127
-ld (hl), #163
+ld (hl), #175
 __endasm;
 }
 
@@ -101,7 +102,10 @@ void main() NONBANKED
 	set_bkg_palette_entry(6,1,TreeBaseTilesCGBPal6c1);
 	set_bkg_palette_entry(6,2,TreeBaseTilesCGBPal6c2);
 	set_bkg_palette_entry(6,3,TreeBaseTilesCGBPal6c3);
-	set_bkg_data(0,2,TreeBaseTiles);
+	set_bkg_data(10,2,TreeBaseTiles);
+	VBK_REG = 1;
+	set_bkg_submap(0,0,32,32,FGMapPLN1,32);
+	VBK_REG = 0;
 	LYC_REG = 143;
 	__asm		//Wonder if this code is even necessary?
 	ld hl, #_DMAInit	//load array address into hl
@@ -114,14 +118,20 @@ void main() NONBANKED
 	cp a, #0x55		//compare
 	jp nz, 100$		//jump if not equal
 	__endasm;
-	memcpy(_RAMBANK + 0x420,ForegroundTiles, 256);
+	memcpy(_RAMBANK + 0x410,ForegroundTiles, 256);
+	while(dynamicMapAddress < 1024)
+	{
+	_RAMBANK[0x740 + dynamicMapAddress] = (FGMap[dynamicMapAddress]) - 1;
+	dynamicMapAddress ++;
+	}
+	dynamicMapAddress = 0;
 	
 	DISPLAY_ON;
 	SHOW_BKG;
 	STAT_REG = 0xC5;
 	SHOW_SPRITES;
 	SPRITES_8x16;
-	add_VBL(huge);
+	add_VBL(DMA);
 
 	set_interrupts(VBL_IFLAG);
 
@@ -137,8 +147,8 @@ void main() NONBANKED
 	if (timer2 == 1)
 	{
 	joyState = joypad();
-	SCX_REG = scrollX & 7;
-	SCY_REG = scrollY & 7;
+	SCX_REG = scrollX;
+	SCY_REG = scrollY;
 	lastSpriteY = spriteY;
 	if (joyState & J_RIGHT)
 	{
@@ -181,8 +191,8 @@ void main() NONBANKED
 	}
 	downshiftedSpriteY = ((spriteY + YVelocity) >> 7);
 	downshiftedSpriteX = (spriteX >> 4);
-	getTile = FGMap[((downshiftedSpriteY * 50) + (downshiftedSpriteX >> 3))];
-	if (getTile >= 0x45 & getTile < 0x7D & YVelocity >= 0)
+	getTile = FGMap[((downshiftedSpriteY << 5) + (downshiftedSpriteX >> 3))];
+	if (getTile >= 78 & getTile < 91 & YVelocity >= 0)
 	{
 	spriteY = lastSpriteY;
 	spriteY = (((spriteY + YVelocity) >> 4) >> 3) << 7;
@@ -196,17 +206,17 @@ void main() NONBANKED
 	{
 	scrollX = 0;
 	}
-	if (scrollX > 248 & scrollX <= 65405)
+	if (scrollX > 96 & scrollX <= 65405)
 	{
-	scrollX = 248;
+	scrollX = 96;
 	}
 	if (scrollY > 65405)
 	{
 	scrollY = 0;
 	}
-	if (scrollY > 248 & scrollY <= 65405)
+	if (scrollY > 95 & scrollY <= 65405)
 	{
-	scrollY = 248;
+	scrollY = 95;
 	}
 	while (scrollX >= scrollXCompare)
 	{
@@ -223,33 +233,37 @@ void main() NONBANKED
 	while (scrollY >= scrollYCompare)
 	{
 	scrollYCompare += 8;
-	dynamicMapAddress += 50;
-	dynamicMapAddress2 += 74;
+	dynamicMapAddress += 32;
+	dynamicMapAddress2 += 64;
 	}
 	while (scrollY < scrollYCompare)
 	{
 	scrollYCompare -= 8;
-	dynamicMapAddress -= 50;
-	dynamicMapAddress2 -= 74;
+	dynamicMapAddress -= 32;
+	dynamicMapAddress2 -= 64;
 	}
 	while (scrollY >= scrollYCompare2)
 	{
 	scrollYCompare2 += 16;
-	dynamicMapAddress2 -= 74;
+	dynamicMapAddress2 -= 64;
 	}
 	while (scrollY < scrollYCompare2)
 	{
 	scrollYCompare2 -= 16;
-	dynamicMapAddress2 += 74;
+	dynamicMapAddress2 += 64;
 	}
 	GraphicsOffset = (scrollY >> 1) << 1;
 	GraphicsOffsetX = ((scrollX >> 1)) & 7;
+	memcpy(_RAMBANK,(TreeBaseTiles - (GraphicsOffset & 15) + 32) + (scrollLookupTable[GraphicsOffsetX] << 3), 1040);		//DMA is strictly limited to 16-byte chunks. I get around this by copying to RAM first
+	memcpy(_RAMBANK + 0x710,(TreeBaseTiles - (GraphicsOffset & 15) + 288), 32);
 	}
 	if (timer2 == 0)
 	{
+	tileAddress = 0x4800 + (dynamicMapAddress2 - (dynamicMapAddress2 >> 1));
 	tileAddress2 = 0x4000 + dynamicMapAddress;
-	tileAddress = 0x49C4 + (dynamicMapAddress2 - (dynamicMapAddress2 >> 1));
 	__asm
+	ld a, #19
+	ld (#0xCFE0), a
 	ld hl, #_tileAddress
 	ld e, (hl)
 	inc hl
@@ -258,308 +272,229 @@ void main() NONBANKED
 	ld c, (hl)
 	inc hl
 	ld b, (hl)
-	ld hl, #0xD7E0
+	ld h, b
+	ld l, c
+	push de
+	ld de, #0x9740
+	add hl, de
+	pop de
 	206$:
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 	
 	ld a, (bc)
-	cp a, #68
-	.db #0x28, #0x06;
-	dec a
-	ld (hl+), a
-	inc de
-	inc bc
-	.db #0x18, #0x04;
-	
+	cp a, #77
+	.db #0x20, #0x02;
 	ld a, (de)
-	ld (hl+), a
+	ld (hl), a
+	inc hl
 	inc de
 	inc bc
+
 
 	push de
 	push hl
 	ld h, b
 	ld l, c
-	ld de, #29
+	ld de, #11
 	add hl, de
 	ld b, h
 	ld c, l
@@ -578,20 +513,12 @@ void main() NONBANKED
 	inc de
 	inc de
 	inc de
-	inc de
-	inc de
-	inc de
-	inc de
-	inc de
-	ld a, h
-	cp a, #0xDA
-	jp c, 206$
-	ld a, l
-	cp a, #0x35
-	jp c, 206$
+	ld a, (#0xCFE0)
+	cp a, #0x00
+	dec a
+	ld (#0xCFE0), a
+	jp nz, 206$
 	__endasm;
-	memcpy(_RAMBANK,(TreeBaseTiles - (GraphicsOffset & 15) + 32) + (scrollLookupTable[GraphicsOffsetX] << 3), (66 << 4));		//DMA is strictly limited to 16-byte chunks. I get around this by copying to RAM first
-	memcpy(_RAMBANK + 0x7B0,(TreeBaseTiles - (GraphicsOffset & 15) + 288), 32);
 	}
 	timer2 ++;
 	if (timer2 == 1)

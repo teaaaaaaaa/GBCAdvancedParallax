@@ -1,0 +1,86 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy Z80-like CPU), page 1.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+    .__.$$$.                                                    =  002710 L
+    .__.ABS.                                                    =  000000 G
+    .__.CPU.                                                    =  000000 L
+    .__.H$L.                                                    =  000000 L
+  0 _DMA                                                           000000 GR
+  4 _DMAInit                                                       0007F8 GR
+    _FGMapPLN0                                                     ****** GX
+    _FGMapPLN1                                                     ****** GX
+    _ForegroundTiles                                               ****** GX
+  1 _GraphicsOffset                                                000000 GR
+  1 _GraphicsOffsetX                                               000001 GR
+    _LCDC_REG                                                      ****** GX
+    _LYC_REG                                                       ****** GX
+    _NR50_REG                                                      ****** GX
+    _NR51_REG                                                      ****** GX
+    _NR52_REG                                                      ****** GX
+    _SCX_REG                                                       ****** GX
+    _SCY_REG                                                       ****** GX
+    _STAT_REG                                                      ****** GX
+    _TreeBaseTiles                                                 ****** GX
+    _VBK_REG                                                       ****** GX
+  1 _YVelocity                                                     00001C GR
+    __RAMBANK                                                      ****** GX
+    __cpu                                                          ****** GX
+    _add_VBL                                                       ****** GX
+    _cpu_fast                                                      ****** GX
+  1 _downshiftedSpriteX                                            00000E GR
+  1 _downshiftedSpriteY                                            000010 GR
+  1 _dynamicMapAddress                                             00001D GR
+  1 _dynamicMapAddress2                                            00001F GR
+  1 _getTile                                                       000005 GR
+  1 _halfTileY                                                     00002B GR
+  1 _isAHeld                                                       00001B GR
+  1 _joyState                                                      000004 GR
+    _joypad                                                        ****** GX
+  1 _lastSpriteX                                                   000006 GR
+  1 _lastSpriteY                                                   000008 GR
+  4 _main                                                          000000 GR
+    _memcpy                                                        ****** GX
+  4 _scrollLookupTable                                             0007FC GR
+  1 _scrollX                                                       000021 GR
+  1 _scrollXCompare                                                000023 GR
+  1 _scrollY                                                       000025 GR
+  1 _scrollYCompare                                                000027 GR
+  1 _scrollYCompare2                                               000029 GR
+    _set_bkg_data                                                  ****** GX
+    _set_bkg_palette_entry                                         ****** GX
+    _set_bkg_submap                                                ****** GX
+    _set_interrupts                                                ****** GX
+  1 _shadowMapAddress                                              000013 GR
+    _shadow_OAM                                                    ****** GX
+  1 _spriteMapAddress                                              000011 GR
+  1 _spriteX                                                       00000A GR
+  1 _spriteY                                                       00000C GR
+  1 _tileAddress                                                   000015 GR
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy Z80-like CPU), page 2.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+  1 _tileAddress2                                                  000017 GR
+  1 _tileAddress3                                                  000019 GR
+  1 _timer                                                         000002 GR
+  1 _timer2                                                        000003 GR
+
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy Z80-like CPU), page 3.
+Hexadecimal [24-Bits]
+
+Area Table
+
+   0 _CODE                                      size     14   flags    0
+   1 _DATA                                      size     2C   flags    0
+   2 _INITIALIZED                               size      0   flags    0
+   3 _DABS                                      size      0   flags    8
+   4 _HOME                                      size    80C   flags    0
+   5 _GSINIT                                    size      0   flags    0
+   6 _GSFINAL                                   size      0   flags    0
+   7 _INITIALIZER                               size      0   flags    0
+   8 _CABS                                      size      0   flags    8
+
